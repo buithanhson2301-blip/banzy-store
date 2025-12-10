@@ -155,9 +155,10 @@ export const createShippingOrder = async (order, senderInfo, token) => {
         };
     } catch (error) {
         console.error('ViettelPost create order error:', error.message);
+        console.error('ViettelPost error details:', error.response?.data);
         return {
             success: false,
-            error: error.response?.data?.message || 'Lỗi khi tạo đơn vận chuyển'
+            error: error.response?.data?.message || error.message || 'Lỗi khi tạo đơn vận chuyển'
         };
     }
 };
