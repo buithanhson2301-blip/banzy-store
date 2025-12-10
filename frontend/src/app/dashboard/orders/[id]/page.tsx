@@ -405,41 +405,12 @@ export default function OrderDetailPage() {
       </div>
 
       {/* Status Actions */}
-      {!['completed', 'cancelled'].includes(order.status) && (
+      {!['completed', 'cancelled', 'returned'].includes(order.status) && (
         <div className="card p-4">
-          <h3 className="font-semibold mb-4">Cập nhật trạng thái</h3>
+          <h3 className="font-semibold mb-4">Thao tác đơn hàng</h3>
           <div className="flex flex-wrap gap-3">
-            {order.status === 'pending' && (
-              <button
-                className="btn btn-primary"
-                onClick={async () => {
-                  try {
-                    await ordersAPI.updateStatus(order._id, 'processing');
-                    toast.success('Đã xác nhận đơn hàng');
-                    const { data } = await ordersAPI.getById(id as string);
-                    setOrder(data);
-                  } catch (e: any) { toast.error(e.message); }
-                }}
-              >
-                ✓ Xác nhận đơn hàng
-              </button>
-            )}
-            {order.status === 'processing' && (
-              <button
-                className="btn btn-primary"
-                onClick={async () => {
-                  try {
-                    await ordersAPI.updateStatus(order._id, 'shipping');
-                    toast.success('Đã chuyển sang đang giao');
-                    const { data } = await ordersAPI.getById(id as string);
-                    setOrder(data);
-                  } catch (e: any) { toast.error(e.message); }
-                }}
-              >
-                🚚 Bắt đầu giao hàng
-              </button>
-            )}
-            {order.status === 'shipping' && (
+            {/* Chỉ hiện nút hoàn thành khi đã giao thành công */}
+            {order.status === 'delivered' && (
               <button
                 className="btn btn-primary"
                 onClick={async () => {
@@ -451,23 +422,48 @@ export default function OrderDetailPage() {
                   } catch (e: any) { toast.error(e.message); }
                 }}
               >
-                ✅ Hoàn thành đơn hàng
+                ✅ Xác nhận hoàn thành
               </button>
             )}
-            <button
-              className="btn btn-danger"
-              onClick={async () => {
-                if (!confirm('Bạn có chắc muốn hủy đơn hàng này?')) return;
-                try {
-                  await ordersAPI.cancel(order._id, 'Hủy bởi admin');
-                  toast.success('Đã hủy đơn hàng');
-                  const { data } = await ordersAPI.getById(id as string);
-                  setOrder(data);
-                } catch (e: any) { toast.error(e.message); }
-              }}
-            >
-              ✕ Hủy đơn hàng
-            </button>
+            {/* Nút hủy đơn - chỉ khi chưa giao */}
+            {['pending', 'processing', 'ready_to_ship'].includes(order.status) && (
+              <button
+                className="btn btn-danger"
+                onClick={async () => {
+                  if (!confirm('Bạn có chắc muốn hủy đơn hàng này?')) return;
+                  try {
+                    await ordersAPI.cancel(order._id, 'Hủy bởi admin');
+                    toast.success('Đã hủy đơn hàng');
+                    const { data } = await ordersAPI.getById(id as string);
+                    setOrder(data);
+                  } catch (e: any) { toast.error(e.message); }
+                }}
+              >
+                ✕ Hủy đơn hàng
+              </button>
+            )}
+            {/* Khi đang giao, chỉ hiện nút hủy vận chuyển */}
+            {order.status === 'shipping' && order.trackingCode && (
+              <button
+                className="btn btn-danger"
+                onClick={async () => {
+                  if (!confirm('Bạn có chắc muốn hủy vận chuyển đơn này? Đơn hàng sẽ bị hoàn lại.')) return;
+                  try {
+                    toast.loading('Đang hủy vận chuyển...', { id: 'cancel-shipping' });
+                    const { data: result } = await shippingAPI.cancelShipping(order._id);
+                    if (result.success) {
+                      toast.success('Đã hủy vận chuyển', { id: 'cancel-shipping' });
+                      const { data } = await ordersAPI.getById(id as string);
+                      setOrder(data);
+                    } else {
+                      toast.error(result.message || 'Không thể hủy', { id: 'cancel-shipping' });
+                    }
+                  } catch (e: any) { toast.error(e.message, { id: 'cancel-shipping' }); }
+                }}
+              >
+                ✕ Hủy vận chuyển
+              </button>
+            )}
           </div>
         </div>
       )}
