@@ -77,6 +77,9 @@ export const createOrder = async (req, res, next) => {
         const {
             customerId, customerName, customerPhone, customerEmail, customerSource, paymentMethod,
             shippingAddress, items, discount = 0, shippingFee = 0, note,
+            // Receiver location IDs for VTP
+            receiverProvinceId, receiverDistrictId, receiverWardId,
+            receiverProvinceName, receiverDistrictName, receiverWardName,
             saveCustomer = true // New flag to auto-save customer
         } = req.body;
 
@@ -158,6 +161,13 @@ export const createOrder = async (req, res, next) => {
             customerSource: customerSource || 'instagram',
             paymentMethod: paymentMethod || 'cod',
             shippingAddress,
+            // Receiver location IDs for VTP shipping
+            receiverProvinceId: receiverProvinceId || 0,
+            receiverDistrictId: receiverDistrictId || 0,
+            receiverWardId: receiverWardId || 0,
+            receiverProvinceName: receiverProvinceName || '',
+            receiverDistrictName: receiverDistrictName || '',
+            receiverWardName: receiverWardName || '',
             items: orderItems,
             subtotal,
             discount,
