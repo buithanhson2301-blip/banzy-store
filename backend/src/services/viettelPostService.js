@@ -96,6 +96,10 @@ export const createShippingOrder = async (order, senderInfo, token) => {
             RECEIVER_ADDRESS: order.shippingAddress,
             RECEIVER_PHONE: order.customerPhone,
             RECEIVER_EMAIL: order.customerEmail || '',
+            // Receiver location - use order's receiver location or default to sender's location
+            RECEIVER_WARD: order.receiverWardId || senderInfo.wardId || 0,
+            RECEIVER_DISTRICT: order.receiverDistrictId || senderInfo.districtId || 0,
+            RECEIVER_PROVINCE: order.receiverProvinceId || senderInfo.provinceId || 0,
 
             // Product info
             PRODUCT_NAME: order.items.map(i => i.productName).join(', ').substring(0, 200),
