@@ -83,6 +83,16 @@ export const createOrder = async (req, res, next) => {
             saveCustomer = true // New flag to auto-save customer
         } = req.body;
 
+        // Debug log for location fields
+        console.log('Order create - Location IDs received:', {
+            receiverProvinceId,
+            receiverDistrictId,
+            receiverWardId,
+            receiverProvinceName,
+            receiverDistrictName,
+            receiverWardName
+        });
+
         if (!items || items.length === 0) {
             return res.status(400).json({ message: 'Đơn hàng phải có ít nhất 1 sản phẩm' });
         }
