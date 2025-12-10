@@ -222,22 +222,8 @@ export default function OrdersPage() {
                                     <td>
                                         <div className="flex gap-1">
                                             <Link href={`/dashboard/orders/${order._id}`} className="btn btn-ghost p-2" title="Xem chi tiết & in"><Eye className="w-4 h-4" /></Link>
-                                            {order.status === 'pending' && (
-                                                <button className="btn btn-ghost p-2 text-green-400" title="Xác nhận đơn hàng" onClick={() => updateStatus(order._id, 'processing')}>
-                                                    <Check className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                            {order.status === 'processing' && (
-                                                <button className="btn btn-ghost p-2 text-blue-400" title="Bắt đầu giao hàng" onClick={() => updateStatus(order._id, 'shipping')}>
-                                                    <Truck className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                            {order.status === 'shipping' && (
-                                                <button className="btn btn-ghost p-2 text-green-400" title="Hoàn thành đơn hàng" onClick={() => updateStatus(order._id, 'completed')}>
-                                                    <Check className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                            {['pending', 'processing', 'shipping'].includes(order.status) && (
+                                            {/* Chỉ hiện nút hủy - các trạng thái khác chuyển qua trang chi tiết */}
+                                            {['pending', 'processing'].includes(order.status) && (
                                                 <button className="btn btn-ghost p-2 text-red-400" title="Hủy đơn hàng" onClick={() => cancelOrder(order._id)}>
                                                     <X className="w-4 h-4" />
                                                 </button>
@@ -522,12 +508,10 @@ export default function OrdersPage() {
                                         </tbody>
                                     </table>
                                 </div>
-                                {/* Status actions */}
-                                {!['completed', 'cancelled'].includes(selectedOrder.status) && (
+                                {/* Chỉ hiện nút hủy trong modal - các thao tác khác chuyển qua trang chi tiết */}
+                                {['pending', 'processing'].includes(selectedOrder.status) && (
                                     <div className="flex gap-2 flex-wrap">
-                                        {selectedOrder.status === 'pending' && <button className="btn btn-primary" onClick={() => updateStatus(selectedOrder._id, 'processing')}>Xác nhận</button>}
-                                        {selectedOrder.status === 'processing' && <button className="btn btn-primary" onClick={() => updateStatus(selectedOrder._id, 'shipping')}>Giao hàng</button>}
-                                        {selectedOrder.status === 'shipping' && <button className="btn btn-primary" onClick={() => updateStatus(selectedOrder._id, 'completed')}>Hoàn thành</button>}
+                                        <Link href={`/dashboard/orders/${selectedOrder._id}`} className="btn btn-primary">Xem chi tiết & Gửi ĐVVC</Link>
                                         <button className="btn btn-danger" onClick={() => { cancelOrder(selectedOrder._id); setShowDetailModal(false); }}>Hủy đơn</button>
                                     </div>
                                 )}
