@@ -145,16 +145,32 @@ export const formatDate = (date: string, includeTime = false) => {
 export const ORDER_STATUS_LABELS: Record<string, string> = {
     pending: 'Chờ xử lý',
     processing: 'Đang xử lý',
+    ready_to_ship: 'Chờ gửi ĐVVC',
     shipping: 'Đang giao',
+    delivered: 'Đã giao',
     completed: 'Hoàn thành',
     cancelled: 'Đã hủy',
+    returned: 'Hoàn hàng',
 };
 
 // Order status colors
 export const ORDER_STATUS_COLORS: Record<string, string> = {
     pending: 'warning',
     processing: 'primary',
+    ready_to_ship: 'warning',
     shipping: 'primary',
+    delivered: 'success',
     completed: 'success',
     cancelled: 'danger',
+    returned: 'danger',
+};
+
+// Shipping provider labels
+export const SHIPPING_PROVIDER_LABELS: Record<string, string> = {
+    viettel_post: 'Viettel Post',
+    ghn: 'Giao Hàng Nhanh',
+    ghtk: 'Giao Hàng Tiết Kiệm',
+    jt_express: 'J&T Express',
+    vnpost: 'VNPost',
+    manual: 'Tự giao',
 };

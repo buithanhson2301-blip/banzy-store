@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Printer, FileText, Truck } from 'lucide-react';
-import { ordersAPI } from '@/lib/api';
-import { formatCurrency, formatDate, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, useAuthStore } from '@/lib/store';
+import { ArrowLeft, Printer, FileText, Truck, RefreshCw, ExternalLink, Package } from 'lucide-react';
+import { ordersAPI, shippingAPI } from '@/lib/api';
+import { formatCurrency, formatDate, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, SHIPPING_PROVIDER_LABELS, useAuthStore } from '@/lib/store';
 import toast from 'react-hot-toast';
 
 export default function OrderDetailPage() {
@@ -268,6 +268,105 @@ export default function OrderDetailPage() {
             {order.note && <p><span className="text-dark-400">Ghi chú:</span> {order.note}</p>}
           </div>
         </div>
+      </div>
+
+      {/* Shipping Info Section */}
+      <div className="card p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold flex items-center gap-2">
+            <Package className="w-5 h-5 text-red-500" />
+            Thông tin vận chuyển
+          </h3>
+          {order.trackingCode && (
+            <a
+              href={`https://viettelpost.vn/tra-cuu?id=${order.trackingCode}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-primary-400 hover:underline flex items-center gap-1"
+            >
+              Tra cứu trên VTP <ExternalLink className="w-4 h-4" />
+            </a>
+          )}
+        </div>
+
+        {order.trackingCode ? (
+          // Đã gửi cho ĐVVC
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-dark-400">Đơn vị VC</p>
+                <p className="font-medium">{SHIPPING_PROVIDER_LABELS[order.shippingProvider] || order.shippingProvider}</p>
+              </div>
+              <div>
+                <p className="text-dark-400">Mã vận đơn</p>
+                <p className="font-mono font-medium text-primary-400">{order.trackingCode}</p>
+              </div>
+              <div>
+                <p className="text-dark-400">Trạng thái VC</p>
+                <p className="font-medium">{order.shippingStatus || 'Đang xử lý'}</p>
+              </div>
+              <div>
+                <p className="text-dark-400">Cập nhật lúc</p>
+                <p className="font-medium">{order.shippingUpdatedAt ? formatDate(order.shippingUpdatedAt, true) : '-'}</p>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                className="btn btn-secondary"
+                onClick={async () => {
+                  try {
+                    toast.loading('Đang cập nhật...', { id: 'tracking' });
+                    const { data: trackResult } = await shippingAPI.trackOrder(order._id);
+                    if (trackResult.success) {
+                      toast.success(`Trạng thái: ${trackResult.shippingStatus}`, { id: 'tracking' });
+                      const { data } = await ordersAPI.getById(id as string);
+                      setOrder(data);
+                    } else {
+                      toast.error(trackResult.message || 'Không thể cập nhật', { id: 'tracking' });
+                    }
+                  } catch (e: any) {
+                    toast.error(e.message, { id: 'tracking' });
+                  }
+                }}
+              >
+                <RefreshCw className="w-4 h-4" />
+                Cập nhật trạng thái
+              </button>
+            </div>
+          </div>
+        ) : (
+          // Chưa gửi ĐVVC
+          <div className="space-y-3">
+            <p className="text-dark-400 text-sm">
+              Đơn hàng chưa được gửi cho đơn vị vận chuyển.
+            </p>
+            {['pending', 'processing', 'ready_to_ship'].includes(order.status) && (
+              <button
+                className="btn btn-primary"
+                onClick={async () => {
+                  if (!confirm('Gửi đơn hàng này cho Viettel Post?')) return;
+                  try {
+                    toast.loading('Đang tạo đơn vận chuyển...', { id: 'shipping' });
+                    const { data: result } = await shippingAPI.sendToShipping(order._id, 'viettel_post');
+                    if (result.success) {
+                      toast.success(`Thành công! Mã vận đơn: ${result.trackingCode}`, { id: 'shipping' });
+                      const { data } = await ordersAPI.getById(id as string);
+                      setOrder(data);
+                    } else {
+                      toast.error(result.message || 'Có lỗi xảy ra', { id: 'shipping' });
+                    }
+                  } catch (e: any) {
+                    toast.error(e.message || 'Không thể gửi đơn. Vui lòng kiểm tra cấu hình Viettel Post.', { id: 'shipping' });
+                  }
+                }}
+              >
+                <Truck className="w-4 h-4" />
+                Gửi cho Viettel Post
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Items */}
