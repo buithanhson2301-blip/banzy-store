@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Settings, Store, Lock, Save, Eye, EyeOff } from 'lucide-react';
+import { Settings, Store, Lock, Save, Eye, EyeOff, Truck, ChevronRight } from 'lucide-react';
 import { authAPI } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
 import toast from 'react-hot-toast';
+import Link from 'next/link';
 
 export default function SettingsPage() {
     const { shop, setShop } = useAuthStore();
@@ -220,6 +221,32 @@ export default function SettingsPage() {
                         Đổi mật khẩu
                     </button>
                 </form>
+            </div>
+
+            {/* Shipping Settings */}
+            <div className="bg-dark-900 border border-dark-800 rounded-xl p-6">
+                <div className="flex items-center gap-3 mb-4">
+                    <Truck className="w-6 h-6 text-red-500" />
+                    <h2 className="text-lg font-semibold">Cài đặt vận chuyển</h2>
+                </div>
+                <p className="text-dark-400 mb-4">
+                    Kết nối với đơn vị vận chuyển để tự động tạo đơn và theo dõi trạng thái giao hàng.
+                </p>
+                <Link
+                    href="/dashboard/settings/shipping"
+                    className="flex items-center justify-between p-4 bg-dark-800 rounded-lg hover:bg-dark-700 transition-colors group"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-red-500/10 rounded-lg">
+                            <Truck className="w-5 h-5 text-red-500" />
+                        </div>
+                        <div>
+                            <p className="font-medium">Viettel Post</p>
+                            <p className="text-sm text-dark-400">Cấu hình API và thông tin gửi hàng</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-dark-400 group-hover:text-white transition-colors" />
+                </Link>
             </div>
 
             {/* License Info */}

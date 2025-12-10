@@ -79,9 +79,22 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    // Shipping provider info
+    shippingProvider: {
+        type: String,
+        enum: ['viettel_post', 'ghn', 'ghtk', 'jt_express', 'vnpost', 'manual', null],
+        default: null
+    },
+    trackingCode: String,           // Mã vận đơn từ ĐVVC
+    shippingOrderId: String,        // ID đơn trên hệ thống ĐVVC
+    shippingStatus: String,         // Trạng thái chi tiết từ ĐVVC
+    shippingStatusCode: Number,     // Mã trạng thái từ ĐVVC
+    estimatedDelivery: Date,        // Ngày giao dự kiến
+    actualDelivery: Date,           // Ngày giao thực tế
+    shippingUpdatedAt: Date,        // Lần cập nhật cuối từ webhook
     status: {
         type: String,
-        enum: ['pending', 'processing', 'shipping', 'completed', 'cancelled'],
+        enum: ['pending', 'processing', 'ready_to_ship', 'shipping', 'delivered', 'completed', 'cancelled', 'returned'],
         default: 'pending'
     },
     note: String,

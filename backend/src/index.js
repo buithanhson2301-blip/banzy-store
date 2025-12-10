@@ -14,6 +14,8 @@ import staffRoutes from './routes/staff.js';
 import supplierRoutes from './routes/suppliers.js';
 import integrationRoutes from './routes/integrations.js';
 import tierRoutes from './routes/tierRoutes.js';
+import shippingRoutes from './routes/shipping.js';
+import webhookRoutes from './routes/webhooks.js';
 
 const app = express();
 
@@ -59,6 +61,8 @@ app.use('/api/staff', staffRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/integrations', integrationRoutes);
 app.use('/api/tier-settings', tierRoutes);
+app.use('/api/shipping', shippingRoutes);
+app.use('/webhooks', webhookRoutes); // Public endpoints, no /api prefix
 
 // Error handling
 app.use(notFound);

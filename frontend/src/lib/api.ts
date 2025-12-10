@@ -142,6 +142,27 @@ export const tierSettingsAPI = {
     update: (tiers: any[]) => api.put('/tier-settings', { tiers }),
 };
 
+// Shipping API
+export const shippingAPI = {
+    // Settings
+    getSettings: () => api.get('/shipping/settings'),
+    getProviderSettings: (provider: string) => api.get(`/shipping/settings/${provider}`),
+    saveSettings: (provider: string, data: any) => api.post(`/shipping/settings/${provider}`, data),
+    verifyToken: (provider: string) => api.post(`/shipping/settings/${provider}/verify`),
+
+    // Orders
+    sendToShipping: (orderId: string, provider?: string) =>
+        api.post(`/shipping/orders/${orderId}/send`, { provider: provider || 'viettel_post' }),
+    trackOrder: (orderId: string) => api.get(`/shipping/orders/${orderId}/track`),
+    cancelShipping: (orderId: string) => api.post(`/shipping/orders/${orderId}/cancel`),
+
+    // Utilities
+    calculateFee: (data: any) => api.post('/shipping/calculate-fee', data),
+
+    // Locations
+    getProvinces: () => api.get('/shipping/locations/provinces'),
+    getDistricts: (provinceId: number) => api.get(`/shipping/locations/districts/${provinceId}`),
+    getWards: (districtId: number) => api.get(`/shipping/locations/wards/${districtId}`),
+};
+
 export default api;
-
-

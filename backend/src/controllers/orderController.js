@@ -3,11 +3,14 @@ import { updateCustomerTier } from './tierController.js';
 
 // Status transition rules
 const STATUS_TRANSITIONS = {
-    pending: ['processing', 'cancelled'],
-    processing: ['shipping', 'cancelled'],
-    shipping: ['completed', 'cancelled'],
+    pending: ['processing', 'ready_to_ship', 'cancelled'],
+    processing: ['ready_to_ship', 'shipping', 'cancelled'],
+    ready_to_ship: ['shipping', 'cancelled'],
+    shipping: ['delivered', 'completed', 'returned', 'cancelled'],
+    delivered: ['completed', 'returned'],
     completed: [],
-    cancelled: []
+    cancelled: [],
+    returned: ['cancelled']
 };
 
 // Get all orders
