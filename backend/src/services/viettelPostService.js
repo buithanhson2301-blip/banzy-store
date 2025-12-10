@@ -333,7 +333,11 @@ export const calculateShippingFee = async (params, token) => {
  */
 export const getProvinces = async () => {
     try {
+        console.log('VTP getProvinces: Calling API at', `${getBaseUrl()}/categories/listProvince`);
         const response = await axios.get(`${getBaseUrl()}/categories/listProvince`);
+
+        console.log('VTP getProvinces response status:', response.data.status);
+        console.log('VTP getProvinces data count:', response.data.data?.length || 0);
 
         if (response.data.status === 200 && response.data.data) {
             return {
@@ -346,6 +350,7 @@ export const getProvinces = async () => {
             };
         }
 
+        console.error('VTP getProvinces: Unexpected response:', response.data);
         return { success: false, provinces: [] };
     } catch (error) {
         console.error('ViettelPost get provinces error:', error.message);
