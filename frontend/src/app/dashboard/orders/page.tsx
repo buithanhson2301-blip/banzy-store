@@ -453,13 +453,13 @@ export default function OrdersPage() {
                                                 className="input"
                                                 value={formData.receiverProvinceId || ''}
                                                 onChange={(e) => {
-                                                    const selected = provinces.find((p: any) => p.PROVINCE_ID === parseInt(e.target.value));
-                                                    handleProvinceChange(parseInt(e.target.value) || 0, selected?.PROVINCE_NAME || '');
+                                                    const selected = provinces.find((p: any) => p.id === parseInt(e.target.value));
+                                                    handleProvinceChange(parseInt(e.target.value) || 0, selected?.name || '');
                                                 }}
                                             >
                                                 <option value="">-- Chọn Tỉnh/Thành phố --</option>
                                                 {provinces.map((p: any) => (
-                                                    <option key={p.PROVINCE_ID} value={p.PROVINCE_ID}>{p.PROVINCE_NAME}</option>
+                                                    <option key={p.id} value={p.id}>{p.name}</option>
                                                 ))}
                                             </select>
 
@@ -468,14 +468,14 @@ export default function OrdersPage() {
                                                 className="input"
                                                 value={formData.receiverDistrictId || ''}
                                                 onChange={(e) => {
-                                                    const selected = districts.find((d: any) => d.DISTRICT_ID === parseInt(e.target.value));
-                                                    handleDistrictChange(parseInt(e.target.value) || 0, selected?.DISTRICT_NAME || '');
+                                                    const selected = districts.find((d: any) => d.id === parseInt(e.target.value));
+                                                    handleDistrictChange(parseInt(e.target.value) || 0, selected?.name || '');
                                                 }}
                                                 disabled={!formData.receiverProvinceId || isLoadingLocations}
                                             >
                                                 <option value="">-- Chọn Quận/Huyện --</option>
                                                 {districts.map((d: any) => (
-                                                    <option key={d.DISTRICT_ID} value={d.DISTRICT_ID}>{d.DISTRICT_NAME}</option>
+                                                    <option key={d.id} value={d.id}>{d.name}</option>
                                                 ))}
                                             </select>
 
@@ -484,14 +484,14 @@ export default function OrdersPage() {
                                                 className="input"
                                                 value={formData.receiverWardId || ''}
                                                 onChange={(e) => {
-                                                    const selected = wards.find((w: any) => w.WARDS_ID === parseInt(e.target.value));
-                                                    setFormData({ ...formData, receiverWardId: parseInt(e.target.value) || 0, receiverWardName: selected?.WARDS_NAME || '' });
+                                                    const selected = wards.find((w: any) => w.id === parseInt(e.target.value));
+                                                    setFormData({ ...formData, receiverWardId: parseInt(e.target.value) || 0, receiverWardName: selected?.name || '' });
                                                 }}
                                                 disabled={!formData.receiverDistrictId || isLoadingLocations}
                                             >
                                                 <option value="">-- Chọn Phường/Xã --</option>
                                                 {wards.map((w: any) => (
-                                                    <option key={w.WARDS_ID} value={w.WARDS_ID}>{w.WARDS_NAME}</option>
+                                                    <option key={w.id} value={w.id}>{w.name}</option>
                                                 ))}
                                             </select>
 
