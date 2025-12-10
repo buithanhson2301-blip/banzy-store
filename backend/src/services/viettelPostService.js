@@ -76,41 +76,52 @@ export const loginViettelPost = async (username, password) => {
  */
 export const createShippingOrder = async (order, senderInfo, token) => {
     try {
+        // Build product list for LIST_ITEM
+        const listItems = order.items.map(item => ({
+            PRODUCT_NAME: item.productName,
+            PRODUCT_QUANTITY: item.quantity,
+            PRODUCT_PRICE: Math.round(item.price),
+            PRODUCT_WEIGHT: 100 // Default 100g per item
+        }));
+
         const orderData = {
             ORDER_NUMBER: order.orderCode,
-            GROUPADDRESS_ID: senderInfo.groupAddressId || 0,
-            CUS_ID: senderInfo.customerId || 0,
+            GROUPADDRESS_ID: parseInt(senderInfo.groupAddressId) || 0,
+            CUS_ID: parseInt(senderInfo.customerId) || 0,
             DELIVERY_DATE: new Date().toISOString().split('T')[0],
 
             // Sender info
             SENDER_FULLNAME: senderInfo.fullName,
             SENDER_ADDRESS: senderInfo.address,
-            SENDER_PHONE: senderInfo.phone,
+            SENDER_PHONE: String(senderInfo.phone),
             SENDER_EMAIL: senderInfo.email || '',
-            SENDER_WARD: senderInfo.wardId || 0,
-            SENDER_DISTRICT: senderInfo.districtId || 0,
-            SENDER_PROVINCE: senderInfo.provinceId || 0,
+            SENDER_WARD: parseInt(senderInfo.wardId) || 0,
+            SENDER_DISTRICT: parseInt(senderInfo.districtId) || 0,
+            SENDER_PROVINCE: parseInt(senderInfo.provinceId) || 0,
 
             // Receiver info
             RECEIVER_FULLNAME: order.customerName,
             RECEIVER_ADDRESS: order.shippingAddress,
-            RECEIVER_PHONE: order.customerPhone,
+            RECEIVER_PHONE: String(order.customerPhone),
             RECEIVER_EMAIL: order.customerEmail || '',
-            // Receiver location - use order's receiver location or default to sender's location
-            RECEIVER_WARD: order.receiverWardId || senderInfo.wardId || 0,
-            RECEIVER_DISTRICT: order.receiverDistrictId || senderInfo.districtId || 0,
-            RECEIVER_PROVINCE: order.receiverProvinceId || senderInfo.provinceId || 0,
+            // Receiver location - use order's receiver location or default to 0 (VTP will try to parse from address)
+            RECEIVER_WARD: parseInt(order.receiverWardId) || 0,
+            RECEIVER_DISTRICT: parseInt(order.receiverDistrictId) || 0,
+            RECEIVER_PROVINCE: parseInt(order.receiverProvinceId) || 0,
 
             // Product info
             PRODUCT_NAME: order.items.map(i => i.productName).join(', ').substring(0, 200),
             PRODUCT_DESCRIPTION: `Đơn hàng ${order.orderCode}`,
             PRODUCT_QUANTITY: order.items.reduce((sum, i) => sum + i.quantity, 0),
-            PRODUCT_PRICE: order.total,
+            PRODUCT_PRICE: Math.round(order.total),
             PRODUCT_WEIGHT: 500, // Default 500g, can be calculated from products
             PRODUCT_LENGTH: 20,
             PRODUCT_WIDTH: 15,
             PRODUCT_HEIGHT: 10,
             PRODUCT_TYPE: 'HH', // Hàng hóa
+
+            // REQUIRED: Type of shipment (1 = domestic, 0 = international)
+            NATIONAL_TYPE: 1,
 
             // Order type and payment
             ORDER_PAYMENT: order.paymentMethod === 'cod' ? 2 : 1, // 2 = COD, 1 = Đã thanh toán
@@ -120,7 +131,7 @@ export const createShippingOrder = async (order, senderInfo, token) => {
             ORDER_NOTE: order.note || '',
 
             // Money
-            MONEY_COLLECTION: order.paymentMethod === 'cod' ? order.total : 0,
+            MONEY_COLLECTION: order.paymentMethod === 'cod' ? Math.round(order.total) : 0,
             MONEY_TOTALFEE: 0, // Will be calculated by VTP
             MONEY_FEECOD: 0,
             MONEY_FEEVAS: 0,
@@ -128,7 +139,10 @@ export const createShippingOrder = async (order, senderInfo, token) => {
             MONEY_FEE: 0,
             MONEY_FEEOTHER: 0,
             MONEY_TOTALVAT: 0,
-            MONEY_TOTAL: order.total
+            MONEY_TOTAL: Math.round(order.total),
+
+            // Product list (some VTP APIs require this)
+            LIST_ITEM: listItems
         };
 
         console.log('ViettelPost createOrder request:', JSON.stringify(orderData, null, 2));
