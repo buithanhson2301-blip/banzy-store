@@ -131,6 +131,8 @@ export const createShippingOrder = async (order, senderInfo, token) => {
             MONEY_TOTAL: order.total
         };
 
+        console.log('ViettelPost createOrder request:', JSON.stringify(orderData, null, 2));
+
         const response = await axios.post(
             `${getBaseUrl()}/order/createOrder`,
             orderData,
@@ -141,6 +143,8 @@ export const createShippingOrder = async (order, senderInfo, token) => {
                 }
             }
         );
+
+        console.log('ViettelPost createOrder response:', JSON.stringify(response.data, null, 2));
 
         if (response.data.status === 200 && response.data.data) {
             return {
@@ -153,16 +157,27 @@ export const createShippingOrder = async (order, senderInfo, token) => {
             };
         }
 
+        // VTP returned non-200 status
+        console.error('ViettelPost API returned non-200:', response.data);
         return {
             success: false,
-            error: response.data.message || 'Không thể tạo đơn vận chuyển'
+            error: response.data.message || `VTP error code: ${response.data.status}`
         };
     } catch (error) {
         console.error('ViettelPost create order error:', error.message);
-        console.error('ViettelPost error details:', error.response?.data);
+        console.error('ViettelPost error response status:', error.response?.status);
+        console.error('ViettelPost error response data:', JSON.stringify(error.response?.data, null, 2));
+
+        // Extract error message from various possible locations
+        const vtpError = error.response?.data?.message
+            || error.response?.data?.error
+            || error.response?.data?.msg
+            || (typeof error.response?.data === 'string' ? error.response.data : null)
+            || error.message;
+
         return {
             success: false,
-            error: error.response?.data?.message || error.message || 'Lỗi khi tạo đơn vận chuyển'
+            error: vtpError || 'Lỗi khi tạo đơn vận chuyển'
         };
     }
 };
