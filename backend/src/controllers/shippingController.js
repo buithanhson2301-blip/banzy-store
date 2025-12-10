@@ -218,11 +218,16 @@ export const sendOrderToShipping = async (req, res, next) => {
             });
         }
 
+        // Debug: Log token (first 20 chars only for security)
+        const token = settings.getToken();
+        console.log('VTP Token prefix (first 20 chars):', token ? token.substring(0, 20) + '...' : 'NULL');
+        console.log('VTP Token length:', token ? token.length : 0);
+
         // Create shipping order
         const result = await viettelPostService.createShippingOrder(
             order,
             settings.senderInfo,
-            settings.getToken()
+            token
         );
 
         if (!result.success) {
