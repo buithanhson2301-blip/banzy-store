@@ -62,6 +62,13 @@ const orderSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    // Receiver location IDs for shipping API
+    receiverProvinceId: Number,
+    receiverDistrictId: Number,
+    receiverWardId: Number,
+    receiverProvinceName: String,
+    receiverDistrictName: String,
+    receiverWardName: String,
     items: [orderItemSchema],
     subtotal: {
         type: Number,

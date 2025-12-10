@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Search, Eye, Check, X, Printer, Truck } from 'lucide-react';
-import { ordersAPI, productsAPI, customersAPI } from '@/lib/api';
+import { ordersAPI, productsAPI, customersAPI, shippingAPI } from '@/lib/api';
 import { formatCurrency, formatDate, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/store';
 import toast from 'react-hot-toast';
 
@@ -19,6 +19,13 @@ export default function OrdersPage() {
     const [customers, setCustomers] = useState<any[]>([]);
     const [products, setProducts] = useState<any[]>([]);
     const [orderItems, setOrderItems] = useState<any[]>([]);
+
+    // Location dropdowns state
+    const [provinces, setProvinces] = useState<any[]>([]);
+    const [districts, setDistricts] = useState<any[]>([]);
+    const [wards, setWards] = useState<any[]>([]);
+    const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+
     const [formData, setFormData] = useState({
         customerId: '',
         customerName: '',
@@ -28,6 +35,12 @@ export default function OrdersPage() {
         paymentMethod: 'cod',
         shippingFee: 0,
         shippingAddress: '',
+        receiverProvinceId: 0,
+        receiverDistrictId: 0,
+        receiverWardId: 0,
+        receiverProvinceName: '',
+        receiverDistrictName: '',
+        receiverWardName: '',
         note: ''
     });
     // Track original customer data to detect changes
@@ -48,12 +61,16 @@ export default function OrdersPage() {
 
     const openCreateModal = async () => {
         try {
-            const [customersRes, productsRes] = await Promise.all([
+            const [customersRes, productsRes, provincesRes] = await Promise.all([
                 customersAPI.getAll({ limit: 100 }),
-                productsAPI.getAll({ limit: 100 })
+                productsAPI.getAll({ limit: 100 }),
+                shippingAPI.getProvinces()
             ]);
             setCustomers(customersRes.data.customers);
             setProducts(productsRes.data.products.filter((p: any) => p.quantity > 0));
+            setProvinces(provincesRes.data.provinces || []);
+            setDistricts([]);
+            setWards([]);
             setOrderItems([]);
             setFormData({
                 customerId: '',
@@ -64,12 +81,69 @@ export default function OrdersPage() {
                 paymentMethod: 'cod',
                 shippingFee: 0,
                 shippingAddress: '',
+                receiverProvinceId: 0,
+                receiverDistrictId: 0,
+                receiverWardId: 0,
+                receiverProvinceName: '',
+                receiverDistrictName: '',
+                receiverWardName: '',
                 note: ''
             });
             setOriginalCustomer(null);
             setShowModal(true);
         } catch (error) {
             toast.error('Không thể tải dữ liệu');
+        }
+    };
+
+    // Load districts when province changes
+    const handleProvinceChange = async (provinceId: number, provinceName: string) => {
+        setFormData({
+            ...formData,
+            receiverProvinceId: provinceId,
+            receiverProvinceName: provinceName,
+            receiverDistrictId: 0,
+            receiverDistrictName: '',
+            receiverWardId: 0,
+            receiverWardName: ''
+        });
+        setWards([]);
+        if (provinceId) {
+            setIsLoadingLocations(true);
+            try {
+                const res = await shippingAPI.getDistricts(provinceId);
+                setDistricts(res.data.districts || []);
+            } catch (e) {
+                console.error('Failed to load districts:', e);
+            } finally {
+                setIsLoadingLocations(false);
+            }
+        } else {
+            setDistricts([]);
+        }
+    };
+
+    // Load wards when district changes
+    const handleDistrictChange = async (districtId: number, districtName: string) => {
+        setFormData({
+            ...formData,
+            receiverDistrictId: districtId,
+            receiverDistrictName: districtName,
+            receiverWardId: 0,
+            receiverWardName: ''
+        });
+        if (districtId) {
+            setIsLoadingLocations(true);
+            try {
+                const res = await shippingAPI.getWards(districtId);
+                setWards(res.data.wards || []);
+            } catch (e) {
+                console.error('Failed to load wards:', e);
+            } finally {
+                setIsLoadingLocations(false);
+            }
+        } else {
+            setWards([]);
         }
     };
 
@@ -135,6 +209,12 @@ export default function OrdersPage() {
                 paymentMethod: formData.paymentMethod,
                 shippingFee: formData.shippingFee,
                 shippingAddress: formData.shippingAddress,
+                receiverProvinceId: formData.receiverProvinceId,
+                receiverDistrictId: formData.receiverDistrictId,
+                receiverWardId: formData.receiverWardId,
+                receiverProvinceName: formData.receiverProvinceName,
+                receiverDistrictName: formData.receiverDistrictName,
+                receiverWardName: formData.receiverWardName,
                 note: formData.note,
                 items: orderItems.map(i => ({ productId: i.productId, quantity: i.quantity }))
             });
@@ -364,10 +444,69 @@ export default function OrdersPage() {
                                             )}
                                         </div>
 
-                                        {/* Shipping Address - moved here */}
-                                        <div>
+                                        {/* Shipping Location Dropdowns */}
+                                        <div className="space-y-3">
                                             <label className="label">Địa chỉ giao hàng *</label>
-                                            <textarea className="input" rows={2} required value={formData.shippingAddress} onChange={(e) => setFormData({ ...formData, shippingAddress: e.target.value })} placeholder="Số nhà, đường, quận/huyện, tỉnh/thành" />
+
+                                            {/* Province Dropdown */}
+                                            <select
+                                                className="input"
+                                                value={formData.receiverProvinceId || ''}
+                                                onChange={(e) => {
+                                                    const selected = provinces.find((p: any) => p.PROVINCE_ID === parseInt(e.target.value));
+                                                    handleProvinceChange(parseInt(e.target.value) || 0, selected?.PROVINCE_NAME || '');
+                                                }}
+                                            >
+                                                <option value="">-- Chọn Tỉnh/Thành phố --</option>
+                                                {provinces.map((p: any) => (
+                                                    <option key={p.PROVINCE_ID} value={p.PROVINCE_ID}>{p.PROVINCE_NAME}</option>
+                                                ))}
+                                            </select>
+
+                                            {/* District Dropdown */}
+                                            <select
+                                                className="input"
+                                                value={formData.receiverDistrictId || ''}
+                                                onChange={(e) => {
+                                                    const selected = districts.find((d: any) => d.DISTRICT_ID === parseInt(e.target.value));
+                                                    handleDistrictChange(parseInt(e.target.value) || 0, selected?.DISTRICT_NAME || '');
+                                                }}
+                                                disabled={!formData.receiverProvinceId || isLoadingLocations}
+                                            >
+                                                <option value="">-- Chọn Quận/Huyện --</option>
+                                                {districts.map((d: any) => (
+                                                    <option key={d.DISTRICT_ID} value={d.DISTRICT_ID}>{d.DISTRICT_NAME}</option>
+                                                ))}
+                                            </select>
+
+                                            {/* Ward Dropdown */}
+                                            <select
+                                                className="input"
+                                                value={formData.receiverWardId || ''}
+                                                onChange={(e) => {
+                                                    const selected = wards.find((w: any) => w.WARDS_ID === parseInt(e.target.value));
+                                                    setFormData({ ...formData, receiverWardId: parseInt(e.target.value) || 0, receiverWardName: selected?.WARDS_NAME || '' });
+                                                }}
+                                                disabled={!formData.receiverDistrictId || isLoadingLocations}
+                                            >
+                                                <option value="">-- Chọn Phường/Xã --</option>
+                                                {wards.map((w: any) => (
+                                                    <option key={w.WARDS_ID} value={w.WARDS_ID}>{w.WARDS_NAME}</option>
+                                                ))}
+                                            </select>
+
+                                            {/* Street Address */}
+                                            <input
+                                                className="input"
+                                                required
+                                                value={formData.shippingAddress}
+                                                onChange={(e) => setFormData({ ...formData, shippingAddress: e.target.value })}
+                                                placeholder="Số nhà, tên đường..."
+                                            />
+
+                                            {isLoadingLocations && (
+                                                <p className="text-xs text-dark-400">Đang tải địa chỉ...</p>
+                                            )}
                                         </div>
 
                                         {/* Email field */}
