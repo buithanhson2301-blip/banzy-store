@@ -390,11 +390,21 @@ export default function OrderDetailPage() {
             </div>
           </div>
         ) : (
-          // Chưa gửi ĐVVC
+          // Chưa gửi ĐVVC - hiển thị khác nhau tùy trạng thái
           <div className="space-y-3">
-            <p className="text-dark-400 text-sm">
-              Đơn hàng chưa được gửi cho đơn vị vận chuyển.
-            </p>
+            {['pending', 'processing', 'ready_to_ship'].includes(order.status) ? (
+              <p className="text-dark-400 text-sm">
+                Chưa gửi cho đơn vị vận chuyển. Bạn có thể gửi qua Viettel Post hoặc tự giao.
+              </p>
+            ) : order.status === 'shipping' ? (
+              <p className="text-green-400 text-sm">
+                📦 Đang tự giao hàng (không qua ĐVVC)
+              </p>
+            ) : order.status === 'delivered' ? (
+              <p className="text-green-400 text-sm">
+                ✅ Đã giao thành công (tự giao)
+              </p>
+            ) : null}
             {['pending', 'processing', 'ready_to_ship'].includes(order.status) && (
               <div className="flex flex-wrap gap-2">
                 <button
