@@ -298,20 +298,20 @@ export default function OrdersPage() {
                         <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Sản phẩm</th><th>Tổng tiền</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
                         <tbody>
                             {orders.map((order) => (
-                                <tr key={order._id}>
+                                <tr key={order._id} className="cursor-pointer hover:bg-dark-800/50" onClick={() => window.location.href = `/dashboard/orders/${order._id}`}>
                                     <td className="font-medium">{order.orderCode}</td>
                                     <td><div><p className="font-medium">{order.customerName || 'Khách vãng lai'}</p><p className="text-sm text-dark-500">{order.customerPhone}</p></div></td>
                                     <td><span className="badge badge-gray">{order.items.length} SP</span></td>
                                     <td className="font-medium text-green-400">{formatCurrency(order.total)}</td>
                                     <td><span className={`badge badge-${ORDER_STATUS_COLORS[order.status]}`}>{ORDER_STATUS_LABELS[order.status]}</span></td>
                                     <td className="text-dark-400">{formatDate(order.createdAt)}</td>
-                                    <td>
+                                    <td onClick={(e) => e.stopPropagation()}>
                                         <div className="flex gap-1">
-                                            <Link href={`/dashboard/orders/${order._id}`} className="btn btn-ghost p-2" title="Xem chi tiết & in"><Eye className="w-4 h-4" /></Link>
+                                            <Link href={`/dashboard/orders/${order._id}`} className="btn btn-ghost p-2" title="Xem chi tiết & in"><Eye className="w-5 h-5" /></Link>
                                             {/* Chỉ hiện nút hủy - các trạng thái khác chuyển qua trang chi tiết */}
                                             {['pending', 'processing'].includes(order.status) && (
                                                 <button className="btn btn-ghost p-2 text-red-400" title="Hủy đơn hàng" onClick={() => cancelOrder(order._id)}>
-                                                    <X className="w-4 h-4" />
+                                                    <X className="w-5 h-5" />
                                                 </button>
                                             )}
                                         </div>

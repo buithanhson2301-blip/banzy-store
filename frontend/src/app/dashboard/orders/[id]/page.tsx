@@ -496,21 +496,37 @@ export default function OrderDetailPage() {
         <div className="card p-4">
           <h3 className="font-semibold mb-4">Thao tác đơn hàng</h3>
           <div className="flex flex-wrap gap-3">
-            {/* Chỉ hiện nút hoàn thành khi đang giao (tự giao, không qua VTP) */}
+            {/* Nút hoàn thành và hoàn hàng khi đang giao (tự giao, không qua VTP) */}
             {order.status === 'shipping' && !order.trackingCode && (
-              <button
-                className="btn btn-primary"
-                onClick={async () => {
-                  try {
-                    await ordersAPI.updateStatus(order._id, 'completed', 'Hoàn thành đơn (tự giao)');
-                    toast.success('Đơn hàng hoàn thành!');
-                    const { data } = await ordersAPI.getById(id as string);
-                    setOrder(data);
-                  } catch (e: any) { toast.error(e.message); }
-                }}
-              >
-                ✅ Hoàn thành đơn
-              </button>
+              <>
+                <button
+                  className="btn btn-primary"
+                  onClick={async () => {
+                    try {
+                      await ordersAPI.updateStatus(order._id, 'completed', 'Hoàn thành đơn (tự giao)');
+                      toast.success('Đơn hàng hoàn thành!');
+                      const { data } = await ordersAPI.getById(id as string);
+                      setOrder(data);
+                    } catch (e: any) { toast.error(e.message); }
+                  }}
+                >
+                  ✅ Hoàn thành đơn
+                </button>
+                <button
+                  className="btn btn-warning"
+                  onClick={async () => {
+                    if (!confirm('Xác nhận đơn hàng bị hoàn?')) return;
+                    try {
+                      await ordersAPI.updateStatus(order._id, 'returned', 'Đơn hàng bị hoàn');
+                      toast.success('Đã chuyển sang trạng thái hoàn hàng');
+                      const { data } = await ordersAPI.getById(id as string);
+                      setOrder(data);
+                    } catch (e: any) { toast.error(e.message); }
+                  }}
+                >
+                  ↩️ Hoàn hàng
+                </button>
+              </>
             )}
 
             {/* Dropdown chọn trạng thái thủ công */}
@@ -551,8 +567,6 @@ export default function OrderDetailPage() {
                   {order.status === 'pending' && <option value="processing">→ Đang xử lý</option>}
                   {['pending', 'processing'].includes(order.status) && <option value="ready_to_ship">→ Sẵn sàng giao</option>}
                   {['pending', 'processing', 'ready_to_ship'].includes(order.status) && <option value="shipping">→ Đang giao</option>}
-                  {order.status === 'shipping' && <option value="completed">→ Hoàn thành</option>}
-                  {order.status === 'shipping' && <option value="returned">→ Hoàn hàng</option>}
                 </select>
               </div>
             )}
