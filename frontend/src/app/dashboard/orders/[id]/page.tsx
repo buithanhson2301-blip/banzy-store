@@ -17,6 +17,10 @@ export default function OrderDetailPage() {
   const [editForm, setEditForm] = useState<any>({});
   const [products, setProducts] = useState<any[]>([]);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [provinces, setProvinces] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [wards, setWards] = useState<any[]>([]);
+  const [isLoadingLoc, setIsLoadingLoc] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -253,11 +257,35 @@ export default function OrderDetailPage() {
                 const { data } = await productsAPI.getAll({ limit: 200 });
                 setProducts(data.products.filter((p: any) => p.quantity > 0));
               } catch (e) { console.error(e); }
+              // Load provinces
+              try {
+                const { data } = await shippingAPI.getProvinces();
+                setProvinces(data.provinces || []);
+              } catch (e) { console.error(e); }
+              // Load districts and wards if order has them
+              if (order.receiverProvinceId) {
+                try {
+                  const { data } = await shippingAPI.getDistricts(order.receiverProvinceId);
+                  setDistricts(data.districts || []);
+                } catch (e) { console.error(e); }
+              }
+              if (order.receiverDistrictId) {
+                try {
+                  const { data } = await shippingAPI.getWards(order.receiverDistrictId);
+                  setWards(data.wards || []);
+                } catch (e) { console.error(e); }
+              }
               setEditForm({
                 customerName: order.customerName,
                 customerPhone: order.customerPhone,
                 customerEmail: order.customerEmail || '',
                 shippingAddress: order.shippingAddress,
+                receiverProvinceId: order.receiverProvinceId || 0,
+                receiverDistrictId: order.receiverDistrictId || 0,
+                receiverWardId: order.receiverWardId || 0,
+                receiverProvinceName: order.receiverProvinceName || '',
+                receiverDistrictName: order.receiverDistrictName || '',
+                receiverWardName: order.receiverWardName || '',
                 note: order.note || '',
                 items: order.items.map((i: any) => ({ productId: i.productId, productName: i.productName, price: i.price, quantity: i.quantity })),
                 shippingFee: order.shippingFee || 0
@@ -545,15 +573,107 @@ export default function OrderDetailPage() {
 
               {/* Address - only if no tracking code */}
               {!order.trackingCode && (
-                <div>
+                <div className="space-y-3">
                   <label className="label">Địa chỉ giao hàng</label>
+
+                  {/* Province */}
+                  <select
+                    className="input"
+                    value={editForm.receiverProvinceId || ''}
+                    onChange={async (e) => {
+                      const selectedId = parseInt(e.target.value) || 0;
+                      const selected = provinces.find((p: any) => p.id === selectedId);
+                      setEditForm({
+                        ...editForm,
+                        receiverProvinceId: selectedId,
+                        receiverProvinceName: selected?.name || '',
+                        receiverDistrictId: 0,
+                        receiverDistrictName: '',
+                        receiverWardId: 0,
+                        receiverWardName: ''
+                      });
+                      setWards([]);
+                      if (selectedId) {
+                        setIsLoadingLoc(true);
+                        try {
+                          const { data } = await shippingAPI.getDistricts(selectedId);
+                          setDistricts(data.districts || []);
+                        } catch (e) { console.error(e); }
+                        setIsLoadingLoc(false);
+                      } else {
+                        setDistricts([]);
+                      }
+                    }}
+                  >
+                    <option value="">-- Chọn Tỉnh/Thành phố --</option>
+                    {provinces.map((p: any) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+
+                  {/* District */}
+                  <select
+                    className="input"
+                    value={editForm.receiverDistrictId || ''}
+                    onChange={async (e) => {
+                      const selectedId = parseInt(e.target.value) || 0;
+                      const selected = districts.find((d: any) => d.id === selectedId);
+                      setEditForm({
+                        ...editForm,
+                        receiverDistrictId: selectedId,
+                        receiverDistrictName: selected?.name || '',
+                        receiverWardId: 0,
+                        receiverWardName: ''
+                      });
+                      if (selectedId) {
+                        setIsLoadingLoc(true);
+                        try {
+                          const { data } = await shippingAPI.getWards(selectedId);
+                          setWards(data.wards || []);
+                        } catch (e) { console.error(e); }
+                        setIsLoadingLoc(false);
+                      } else {
+                        setWards([]);
+                      }
+                    }}
+                    disabled={!editForm.receiverProvinceId || isLoadingLoc}
+                  >
+                    <option value="">-- Chọn Quận/Huyện --</option>
+                    {districts.map((d: any) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+
+                  {/* Ward */}
+                  <select
+                    className="input"
+                    value={editForm.receiverWardId || ''}
+                    onChange={(e) => {
+                      const selectedId = parseInt(e.target.value) || 0;
+                      const selected = wards.find((w: any) => w.id === selectedId);
+                      setEditForm({
+                        ...editForm,
+                        receiverWardId: selectedId,
+                        receiverWardName: selected?.name || ''
+                      });
+                    }}
+                    disabled={!editForm.receiverDistrictId || isLoadingLoc}
+                  >
+                    <option value="">-- Chọn Phường/Xã --</option>
+                    {wards.map((w: any) => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
+                    ))}
+                  </select>
+
+                  {/* Street address */}
                   <input
                     className="input"
                     value={editForm.shippingAddress || ''}
                     onChange={(e) => setEditForm({ ...editForm, shippingAddress: e.target.value })}
                     placeholder="Số nhà, tên đường..."
                   />
-                  <p className="text-xs text-dark-400 mt-1">Lưu ý: Để thay đổi tỉnh/quận/phường, vui lòng tạo đơn mới.</p>
+
+                  {isLoadingLoc && <p className="text-xs text-dark-400">Đang tải địa chỉ...</p>}
                 </div>
               )}
 
@@ -710,6 +830,12 @@ export default function OrderDetailPage() {
                       customerPhone: editForm.customerPhone,
                       customerEmail: editForm.customerEmail,
                       shippingAddress: editForm.shippingAddress,
+                      receiverProvinceId: editForm.receiverProvinceId,
+                      receiverDistrictId: editForm.receiverDistrictId,
+                      receiverWardId: editForm.receiverWardId,
+                      receiverProvinceName: editForm.receiverProvinceName,
+                      receiverDistrictName: editForm.receiverDistrictName,
+                      receiverWardName: editForm.receiverWardName,
                       note: editForm.note,
                       items: order.trackingCode ? undefined : editForm.items.map((i: any) => ({ productId: i.productId, quantity: i.quantity })),
                       shippingFee: editForm.shippingFee
