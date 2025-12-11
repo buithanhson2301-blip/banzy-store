@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Printer, FileText, Truck, RefreshCw, ExternalLink, Package } from 'lucide-react';
-import { ordersAPI, shippingAPI } from '@/lib/api';
+import { ArrowLeft, Printer, FileText, Truck, RefreshCw, ExternalLink, Package, Edit2, X, Plus, Minus } from 'lucide-react';
+import { ordersAPI, shippingAPI, productsAPI } from '@/lib/api';
 import { formatCurrency, formatDate, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, SHIPPING_PROVIDER_LABELS, useAuthStore } from '@/lib/store';
 import toast from 'react-hot-toast';
 
@@ -13,6 +13,10 @@ export default function OrderDetailPage() {
   const { shop } = useAuthStore();
   const [order, setOrder] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState<any>({});
+  const [products, setProducts] = useState<any[]>([]);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -241,6 +245,28 @@ export default function OrderDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          {/* Show edit button if order is editable */}
+          {!['completed', 'cancelled', 'returned'].includes(order.status) && (
+            <button className="btn btn-primary" onClick={async () => {
+              // Load products for adding to order
+              try {
+                const { data } = await productsAPI.getAll({ limit: 200 });
+                setProducts(data.products.filter((p: any) => p.quantity > 0));
+              } catch (e) { console.error(e); }
+              setEditForm({
+                customerName: order.customerName,
+                customerPhone: order.customerPhone,
+                customerEmail: order.customerEmail || '',
+                shippingAddress: order.shippingAddress,
+                note: order.note || '',
+                items: order.items.map((i: any) => ({ productId: i.productId, productName: i.productName, price: i.price, quantity: i.quantity })),
+                shippingFee: order.shippingFee || 0
+              });
+              setShowEditModal(true);
+            }}>
+              <Edit2 className="w-4 h-4" /> Sửa đơn
+            </button>
+          )}
           <button className="btn btn-secondary" onClick={printInvoice}>
             <FileText className="w-4 h-4" /> In hóa đơn
           </button>
@@ -482,6 +508,226 @@ export default function OrderDetailPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Order Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-900 border border-dark-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-dark-800 flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Sửa đơn hàng {order.orderCode}</h2>
+              <button className="btn btn-ghost p-2" onClick={() => setShowEditModal(false)}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              {/* Customer Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Tên khách hàng</label>
+                  <input
+                    className="input"
+                    value={editForm.customerName || ''}
+                    onChange={(e) => setEditForm({ ...editForm, customerName: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="label">Số điện thoại</label>
+                  <input
+                    className="input"
+                    value={editForm.customerPhone || ''}
+                    onChange={(e) => setEditForm({ ...editForm, customerPhone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Address - only if no tracking code */}
+              {!order.trackingCode && (
+                <div>
+                  <label className="label">Địa chỉ giao hàng</label>
+                  <input
+                    className="input"
+                    value={editForm.shippingAddress || ''}
+                    onChange={(e) => setEditForm({ ...editForm, shippingAddress: e.target.value })}
+                    placeholder="Số nhà, tên đường..."
+                  />
+                  <p className="text-xs text-dark-400 mt-1">Lưu ý: Để thay đổi tỉnh/quận/phường, vui lòng tạo đơn mới.</p>
+                </div>
+              )}
+
+              {order.trackingCode && (
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm text-yellow-400">
+                  ⚠️ Đơn đã gửi ĐVVC - Không thể sửa địa chỉ và sản phẩm
+                </div>
+              )}
+
+              {/* Items - only if no tracking code */}
+              {!order.trackingCode && (
+                <div>
+                  <label className="label">Sản phẩm</label>
+                  <div className="space-y-2">
+                    {editForm.items?.map((item: any, idx: number) => (
+                      <div key={idx} className="flex items-center gap-3 p-3 bg-dark-800 rounded-lg">
+                        <div className="flex-1">
+                          <p className="font-medium">{item.productName}</p>
+                          <p className="text-sm text-dark-400">{formatCurrency(item.price)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="btn btn-ghost p-1"
+                            onClick={() => {
+                              if (item.quantity > 1) {
+                                setEditForm({
+                                  ...editForm,
+                                  items: editForm.items.map((i: any, j: number) =>
+                                    j === idx ? { ...i, quantity: i.quantity - 1 } : i
+                                  )
+                                });
+                              }
+                            }}
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          <span className="w-8 text-center">{item.quantity}</span>
+                          <button
+                            type="button"
+                            className="btn btn-ghost p-1"
+                            onClick={() => {
+                              setEditForm({
+                                ...editForm,
+                                items: editForm.items.map((i: any, j: number) =>
+                                  j === idx ? { ...i, quantity: i.quantity + 1 } : i
+                                )
+                              });
+                            }}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-ghost p-1 text-red-400"
+                          onClick={() => {
+                            setEditForm({
+                              ...editForm,
+                              items: editForm.items.filter((_: any, j: number) => j !== idx)
+                            });
+                          }}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add product */}
+                  <div className="mt-3">
+                    <select
+                      className="input"
+                      onChange={(e) => {
+                        const productId = e.target.value;
+                        if (!productId) return;
+                        const product = products.find(p => p._id === productId);
+                        if (!product) return;
+                        const existing = editForm.items.find((i: any) => i.productId === productId);
+                        if (existing) {
+                          setEditForm({
+                            ...editForm,
+                            items: editForm.items.map((i: any) =>
+                              i.productId === productId ? { ...i, quantity: i.quantity + 1 } : i
+                            )
+                          });
+                        } else {
+                          setEditForm({
+                            ...editForm,
+                            items: [...editForm.items, { productId, productName: product.name, price: product.price, quantity: 1 }]
+                          });
+                        }
+                        e.target.value = '';
+                      }}
+                    >
+                      <option value="">+ Thêm sản phẩm...</option>
+                      {products.map(p => (
+                        <option key={p._id} value={p._id}>{p.name} - {formatCurrency(p.price)}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Note */}
+              <div>
+                <label className="label">Ghi chú</label>
+                <textarea
+                  className="input"
+                  rows={2}
+                  value={editForm.note || ''}
+                  onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
+                />
+              </div>
+
+              {/* Summary */}
+              <div className="bg-dark-800 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-dark-400">Tạm tính:</span>
+                  <span>{formatCurrency(editForm.items?.reduce((sum: number, i: any) => sum + i.price * i.quantity, 0) || 0)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-dark-400">Phí ship:</span>
+                  <span>{formatCurrency(editForm.shippingFee || 0)}</span>
+                </div>
+                <div className="flex justify-between font-bold border-t border-dark-700 pt-2">
+                  <span>Tổng cộng:</span>
+                  <span className="text-green-400">
+                    {formatCurrency((editForm.items?.reduce((sum: number, i: any) => sum + i.price * i.quantity, 0) || 0) + (editForm.shippingFee || 0))}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-dark-800 flex gap-3">
+              <button
+                className="btn btn-secondary flex-1"
+                onClick={() => setShowEditModal(false)}
+              >
+                Hủy
+              </button>
+              <button
+                className="btn btn-primary flex-1"
+                disabled={isUpdating}
+                onClick={async () => {
+                  if (!editForm.items || editForm.items.length === 0) {
+                    toast.error('Đơn hàng phải có ít nhất 1 sản phẩm');
+                    return;
+                  }
+                  setIsUpdating(true);
+                  try {
+                    await ordersAPI.update(order._id, {
+                      customerName: editForm.customerName,
+                      customerPhone: editForm.customerPhone,
+                      customerEmail: editForm.customerEmail,
+                      shippingAddress: editForm.shippingAddress,
+                      note: editForm.note,
+                      items: order.trackingCode ? undefined : editForm.items.map((i: any) => ({ productId: i.productId, quantity: i.quantity })),
+                      shippingFee: editForm.shippingFee
+                    });
+                    toast.success('Đã cập nhật đơn hàng');
+                    const { data } = await ordersAPI.getById(id as string);
+                    setOrder(data);
+                    setShowEditModal(false);
+                  } catch (e: any) {
+                    toast.error(e.message || 'Không thể cập nhật');
+                  } finally {
+                    setIsUpdating(false);
+                  }
+                }}
+              >
+                {isUpdating ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </button>
+            </div>
           </div>
         </div>
       )}

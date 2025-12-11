@@ -90,6 +90,7 @@ export const ordersAPI = {
     getAll: (params?: any) => api.get('/orders', { params }),
     getById: (id: string) => api.get(`/orders/${id}`),
     create: (data: any) => api.post('/orders', data),
+    update: (id: string, data: any) => api.put(`/orders/${id}`, data),
     updateStatus: (id: string, status: string, note?: string) =>
         api.patch(`/orders/${id}/status`, { status, note }),
     cancel: (id: string, reason?: string) =>

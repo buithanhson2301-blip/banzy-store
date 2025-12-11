@@ -308,6 +308,116 @@ export const cancelOrder = async (req, res, next) => {
     }
 };
 
+// Update order (only for orders not yet shipped)
+export const updateOrder = async (req, res, next) => {
+    try {
+        const {
+            customerName, customerPhone, customerEmail,
+            shippingAddress, receiverProvinceId, receiverDistrictId, receiverWardId,
+            receiverProvinceName, receiverDistrictName, receiverWardName,
+            items, shippingFee, note
+        } = req.body;
+
+        const order = await Order.findOne({
+            _id: req.params.id,
+            shopId: req.shop._id
+        });
+
+        if (!order) {
+            return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
+        }
+
+        // Check if order can be edited
+        const nonEditableStatuses = ['completed', 'cancelled', 'returned'];
+        if (nonEditableStatuses.includes(order.status)) {
+            return res.status(400).json({
+                message: 'Không thể sửa đơn hàng đã hoàn thành hoặc đã hủy'
+            });
+        }
+
+        // If order has tracking code, only allow editing customer info and note, not address or items
+        const hasTrackingCode = !!order.trackingCode;
+
+        // Update customer info (always allowed if order is editable)
+        if (customerName !== undefined) order.customerName = customerName;
+        if (customerPhone !== undefined) order.customerPhone = customerPhone;
+        if (customerEmail !== undefined) order.customerEmail = customerEmail;
+        if (note !== undefined) order.note = note;
+
+        // Update address (only if no tracking code)
+        if (!hasTrackingCode) {
+            if (shippingAddress !== undefined) order.shippingAddress = shippingAddress;
+            if (receiverProvinceId !== undefined) order.receiverProvinceId = receiverProvinceId;
+            if (receiverDistrictId !== undefined) order.receiverDistrictId = receiverDistrictId;
+            if (receiverWardId !== undefined) order.receiverWardId = receiverWardId;
+            if (receiverProvinceName !== undefined) order.receiverProvinceName = receiverProvinceName;
+            if (receiverDistrictName !== undefined) order.receiverDistrictName = receiverDistrictName;
+            if (receiverWardName !== undefined) order.receiverWardName = receiverWardName;
+        }
+
+        // Update items (only if no tracking code)
+        if (!hasTrackingCode && items && Array.isArray(items)) {
+            // Restore old stock
+            for (const oldItem of order.items) {
+                await Product.findByIdAndUpdate(oldItem.productId, {
+                    $inc: { quantity: oldItem.quantity }
+                });
+            }
+
+            // Validate and process new items
+            const newItems = [];
+            let subtotal = 0;
+
+            for (const item of items) {
+                const product = await Product.findById(item.productId);
+                if (!product) {
+                    return res.status(400).json({ message: `Sản phẩm không tồn tại: ${item.productId}` });
+                }
+                if (product.quantity < item.quantity) {
+                    return res.status(400).json({
+                        message: `Không đủ hàng: ${product.name} (còn ${product.quantity})`
+                    });
+                }
+
+                newItems.push({
+                    productId: product._id,
+                    productName: product.name,
+                    price: product.price,
+                    quantity: item.quantity
+                });
+                subtotal += product.price * item.quantity;
+
+                // Reduce new stock
+                await Product.findByIdAndUpdate(product._id, {
+                    $inc: { quantity: -item.quantity }
+                });
+            }
+
+            order.items = newItems;
+            order.subtotal = subtotal;
+            order.total = subtotal - (order.discount || 0) + (shippingFee !== undefined ? shippingFee : order.shippingFee);
+        }
+
+        // Update shipping fee if provided (only if no tracking code)
+        if (!hasTrackingCode && shippingFee !== undefined) {
+            order.shippingFee = shippingFee;
+            order.total = order.subtotal - (order.discount || 0) + shippingFee;
+        }
+
+        // Add to status history
+        order.statusHistory.push({
+            status: order.status,
+            note: 'Đơn hàng đã được chỉnh sửa',
+            changedBy: req.user._id
+        });
+
+        await order.save();
+        res.json(order);
+    } catch (error) {
+        next(error);
+    }
+};
+
 // Get order stats
 export const getOrderStats = async (req, res, next) => {
     try {

@@ -180,8 +180,13 @@ export default function CustomersPage() {
         e.preventDefault();
         try {
             if (editingCustomer) {
-                await customersAPI.update(editingCustomer._id, formData);
-                toast.success('Đã cập nhật khách hàng');
+                const { data } = await customersAPI.update(editingCustomer._id, formData);
+                // Show sync notification if orders were updated
+                if (data.syncedOrdersCount > 0) {
+                    toast.success(`Đã cập nhật khách hàng và đồng bộ ${data.syncedOrdersCount} đơn hàng`, { duration: 5000 });
+                } else {
+                    toast.success('Đã cập nhật khách hàng');
+                }
             } else {
                 await customersAPI.create(formData);
                 toast.success('Đã thêm khách hàng mới');

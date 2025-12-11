@@ -89,7 +89,7 @@ export const createCustomer = async (req, res, next) => {
 // Update customer
 export const updateCustomer = async (req, res, next) => {
     try {
-        const { email } = req.body;
+        const { email, name, phone, address, provinceId, districtId, wardId, provinceName, districtName, wardName } = req.body;
 
         // Check duplicate email
         if (email) {
@@ -113,7 +113,43 @@ export const updateCustomer = async (req, res, next) => {
             return res.status(404).json({ message: 'Không tìm thấy khách hàng' });
         }
 
-        res.json(customer);
+        // Sync customer info to pending/processing/ready_to_ship orders (without tracking code)
+        const syncableStatuses = ['pending', 'processing', 'ready_to_ship'];
+        const updateFields = {};
+
+        if (name !== undefined) updateFields.customerName = name;
+        if (phone !== undefined) updateFields.customerPhone = phone;
+        if (email !== undefined) updateFields.customerEmail = email;
+        if (address !== undefined) updateFields.shippingAddress = address;
+        if (provinceId !== undefined) updateFields.receiverProvinceId = provinceId;
+        if (districtId !== undefined) updateFields.receiverDistrictId = districtId;
+        if (wardId !== undefined) updateFields.receiverWardId = wardId;
+        if (provinceName !== undefined) updateFields.receiverProvinceName = provinceName;
+        if (districtName !== undefined) updateFields.receiverDistrictName = districtName;
+        if (wardName !== undefined) updateFields.receiverWardName = wardName;
+
+        // Only sync if there are fields to update
+        let syncedOrdersCount = 0;
+        if (Object.keys(updateFields).length > 0) {
+            const syncResult = await Order.updateMany(
+                {
+                    shopId: req.shop._id,
+                    customerId: req.params.id,
+                    status: { $in: syncableStatuses },
+                    trackingCode: { $exists: false } // Only sync orders not yet sent to shipping
+                },
+                { $set: updateFields }
+            );
+            syncedOrdersCount = syncResult.modifiedCount;
+        }
+
+        res.json({
+            customer,
+            syncedOrdersCount,
+            message: syncedOrdersCount > 0
+                ? `Đã cập nhật khách hàng và đồng bộ ${syncedOrdersCount} đơn hàng`
+                : 'Đã cập nhật khách hàng'
+        });
     } catch (error) {
         next(error);
     }

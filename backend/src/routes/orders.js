@@ -11,6 +11,7 @@ router.get('/', orderController.getOrders);
 router.get('/stats', orderController.getOrderStats);
 router.get('/:id', orderController.getOrder);
 router.post('/', orderController.createOrder);
+router.put('/:id', orderController.updateOrder);
 router.patch('/:id/status', orderController.updateOrderStatus);
 router.post('/:id/cancel', orderController.cancelOrder);
 
