@@ -73,7 +73,7 @@ export default function OrderDetailPage() {
             <h3>Thông tin khách hàng</h3>
             <p><strong>${order.customerName || 'Khách vãng lai'}</strong></p>
             <p>ĐT: ${order.customerPhone || '-'}</p>
-            <p>Địa chỉ: ${order.shippingAddress || '-'}</p>
+            <p>Địa chỉ: ${[order.shippingAddress, order.receiverWardName, order.receiverDistrictName, order.receiverProvinceName].filter(Boolean).join(', ') || '-'}</p>
           </div>
           <div class="info-box" style="text-align: right;">
             <h3>Trạng thái</h3>
@@ -166,7 +166,7 @@ export default function OrderDetailPage() {
           <h2>NGƯỜI NHẬN</h2>
           <p class="recipient">${order.customerName || 'Khách vãng lai'}</p>
           <p>ĐT: <strong>${order.customerPhone || '-'}</strong></p>
-          <p>Địa chỉ: <strong>${order.shippingAddress}</strong></p>
+          <p>Địa chỉ: <strong>${[order.shippingAddress, order.receiverWardName, order.receiverDistrictName, order.receiverProvinceName].filter(Boolean).join(', ')}</strong></p>
         </div>
         
         <table>
@@ -257,7 +257,7 @@ export default function OrderDetailPage() {
           <div className="space-y-2 text-sm">
             <p><span className="text-dark-400">Tên:</span> <span className="font-medium">{order.customerName || 'Khách vãng lai'}</span></p>
             <p><span className="text-dark-400">Điện thoại:</span> {order.customerPhone || '-'}</p>
-            <p><span className="text-dark-400">Địa chỉ giao:</span> {order.shippingAddress}</p>
+            <p><span className="text-dark-400">Địa chỉ giao:</span> {[order.shippingAddress, order.receiverWardName, order.receiverDistrictName, order.receiverProvinceName].filter(Boolean).join(', ') || '-'}</p>
           </div>
         </div>
         <div className="card p-4">

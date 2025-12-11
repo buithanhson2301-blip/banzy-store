@@ -26,6 +26,31 @@ const customerSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    // Địa chỉ chi tiết cho vận chuyển
+    provinceId: {
+        type: Number,
+        default: 0
+    },
+    districtId: {
+        type: Number,
+        default: 0
+    },
+    wardId: {
+        type: Number,
+        default: 0
+    },
+    provinceName: {
+        type: String,
+        default: ''
+    },
+    districtName: {
+        type: String,
+        default: ''
+    },
+    wardName: {
+        type: String,
+        default: ''
+    },
     note: {
         type: String,
         default: ''

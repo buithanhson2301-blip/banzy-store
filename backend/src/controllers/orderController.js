@@ -149,15 +149,33 @@ export const createOrder = async (req, res, next) => {
             });
 
             if (!customer) {
-                // Create new customer
+                // Create new customer with full address
                 customer = new Customer({
                     shopId: req.shop._id,
                     name: customerName,
                     phone: customerPhone,
                     email: customerEmail || '',
-                    address: shippingAddress || ''
+                    address: shippingAddress || '',
+                    provinceId: receiverProvinceId || 0,
+                    districtId: receiverDistrictId || 0,
+                    wardId: receiverWardId || 0,
+                    provinceName: receiverProvinceName || '',
+                    districtName: receiverDistrictName || '',
+                    wardName: receiverWardName || ''
                 });
                 await customer.save();
+            } else {
+                // Update existing customer's address if it's empty or new address is provided
+                if (!customer.provinceId && receiverProvinceId) {
+                    customer.address = shippingAddress || customer.address;
+                    customer.provinceId = receiverProvinceId;
+                    customer.districtId = receiverDistrictId;
+                    customer.wardId = receiverWardId;
+                    customer.provinceName = receiverProvinceName;
+                    customer.districtName = receiverDistrictName;
+                    customer.wardName = receiverWardName;
+                    await customer.save();
+                }
             }
             finalCustomerId = customer._id;
         }

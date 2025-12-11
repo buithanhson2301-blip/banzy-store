@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Plus, Search, Edit2, Trash2, Eye, Settings } from 'lucide-react';
-import { customersAPI, tierSettingsAPI } from '@/lib/api';
+import { customersAPI, tierSettingsAPI, shippingAPI } from '@/lib/api';
 import { formatCurrency, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, formatDate } from '@/lib/store';
 import toast from 'react-hot-toast';
 
@@ -12,6 +12,12 @@ interface Customer {
     email: string;
     phone: string;
     address: string;
+    provinceId?: number;
+    districtId?: number;
+    wardId?: number;
+    provinceName?: string;
+    districtName?: string;
+    wardName?: string;
     totalOrders: number;
     totalSpent: number;
     tier: number;
@@ -34,13 +40,23 @@ export default function CustomersPage() {
     const [showTierModal, setShowTierModal] = useState(false);
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
     const [customerOrders, setCustomerOrders] = useState<any[]>([]);
-    const [formData, setFormData] = useState({ name: '', email: '', phone: '', address: '' });
+    const [formData, setFormData] = useState({
+        name: '', email: '', phone: '', address: '',
+        provinceId: 0, districtId: 0, wardId: 0,
+        provinceName: '', districtName: '', wardName: ''
+    });
     const [tierConfigs, setTierConfigs] = useState<TierConfig[]>([
         { level: 0, name: 'Thường', minSpent: 0, minOrders: 0, color: '#9CA3AF' },
         { level: 1, name: 'Bạc', minSpent: 2000000, minOrders: 5, color: '#94A3B8' },
         { level: 2, name: 'Vàng', minSpent: 10000000, minOrders: 20, color: '#EAB308' },
         { level: 3, name: 'Kim cương', minSpent: 50000000, minOrders: 50, color: '#06B6D4' }
     ]);
+
+    // Location dropdowns state
+    const [provinces, setProvinces] = useState<any[]>([]);
+    const [districts, setDistricts] = useState<any[]>([]);
+    const [wards, setWards] = useState<any[]>([]);
+    const [isLoadingLocations, setIsLoadingLocations] = useState(false);
 
     const fetchTierSettings = async () => {
         try {
@@ -67,14 +83,84 @@ export default function CustomersPage() {
         const timer = setTimeout(() => fetchCustomers(), 300);
         return () => clearTimeout(timer);
     }, [search]);
+    // Load provinces on mount
+    useEffect(() => {
+        const loadProvinces = async () => {
+            try {
+                const { data } = await shippingAPI.getProvinces();
+                setProvinces(data.provinces || []);
+            } catch (e) {
+                console.error('Failed to load provinces:', e);
+            }
+        };
+        loadProvinces();
+    }, []);
 
-    const openModal = (customer?: Customer) => {
+    // Load districts when province changes
+    const loadDistricts = async (provinceId: number) => {
+        if (!provinceId) {
+            setDistricts([]);
+            return;
+        }
+        setIsLoadingLocations(true);
+        try {
+            const { data } = await shippingAPI.getDistricts(provinceId);
+            setDistricts(data.districts || []);
+        } catch (e) {
+            console.error('Failed to load districts:', e);
+        } finally {
+            setIsLoadingLocations(false);
+        }
+    };
+
+    // Load wards when district changes
+    const loadWards = async (districtId: number) => {
+        if (!districtId) {
+            setWards([]);
+            return;
+        }
+        setIsLoadingLocations(true);
+        try {
+            const { data } = await shippingAPI.getWards(districtId);
+            setWards(data.wards || []);
+        } catch (e) {
+            console.error('Failed to load wards:', e);
+        } finally {
+            setIsLoadingLocations(false);
+        }
+    };
+
+    const openModal = async (customer?: Customer) => {
         if (customer) {
             setEditingCustomer(customer);
-            setFormData({ name: customer.name, email: customer.email || '', phone: customer.phone, address: customer.address || '' });
+            setFormData({
+                name: customer.name,
+                email: customer.email || '',
+                phone: customer.phone,
+                address: customer.address || '',
+                provinceId: customer.provinceId || 0,
+                districtId: customer.districtId || 0,
+                wardId: customer.wardId || 0,
+                provinceName: customer.provinceName || '',
+                districtName: customer.districtName || '',
+                wardName: customer.wardName || ''
+            });
+            // Load districts and wards for existing customer
+            if (customer.provinceId) {
+                await loadDistricts(customer.provinceId);
+            }
+            if (customer.districtId) {
+                await loadWards(customer.districtId);
+            }
         } else {
             setEditingCustomer(null);
-            setFormData({ name: '', email: '', phone: '', address: '' });
+            setFormData({
+                name: '', email: '', phone: '', address: '',
+                provinceId: 0, districtId: 0, wardId: 0,
+                provinceName: '', districtName: '', wardName: ''
+            });
+            setDistricts([]);
+            setWards([]);
         }
         setShowModal(true);
     };
@@ -182,7 +268,7 @@ export default function CustomersPage() {
                                                 </div>
                                                 <div>
                                                     <p className="font-medium">{customer.name}</p>
-                                                    <p className="text-sm text-dark-500 truncate max-w-[200px]">{customer.address || '-'}</p>
+                                                    <p className="text-sm text-dark-500 truncate max-w-[200px]">{[customer.address, customer.wardName, customer.districtName, customer.provinceName].filter(Boolean).join(', ') || '-'}</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -231,10 +317,95 @@ export default function CustomersPage() {
                                     <input type="email" className="input" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
                                 </div>
                             </div>
-                            <div>
+
+                            {/* Location Dropdowns */}
+                            <div className="space-y-3">
                                 <label className="label">Địa chỉ</label>
-                                <textarea className="input" rows={2} value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
+
+                                {/* Province Dropdown */}
+                                <select
+                                    className="input"
+                                    value={formData.provinceId || ''}
+                                    onChange={(e) => {
+                                        const selectedId = parseInt(e.target.value) || 0;
+                                        const selected = provinces.find((p: any) => p.id === selectedId);
+                                        setFormData({
+                                            ...formData,
+                                            provinceId: selectedId,
+                                            provinceName: selected?.name || '',
+                                            districtId: 0,
+                                            districtName: '',
+                                            wardId: 0,
+                                            wardName: ''
+                                        });
+                                        setWards([]);
+                                        loadDistricts(selectedId);
+                                    }}
+                                >
+                                    <option value="">-- Chọn Tỉnh/Thành phố --</option>
+                                    {provinces.map((p: any) => (
+                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                    ))}
+                                </select>
+
+                                {/* District Dropdown */}
+                                <select
+                                    className="input"
+                                    value={formData.districtId || ''}
+                                    onChange={(e) => {
+                                        const selectedId = parseInt(e.target.value) || 0;
+                                        const selected = districts.find((d: any) => d.id === selectedId);
+                                        setFormData({
+                                            ...formData,
+                                            districtId: selectedId,
+                                            districtName: selected?.name || '',
+                                            wardId: 0,
+                                            wardName: ''
+                                        });
+                                        loadWards(selectedId);
+                                    }}
+                                    disabled={!formData.provinceId || isLoadingLocations}
+                                >
+                                    <option value="">-- Chọn Quận/Huyện --</option>
+                                    {districts.map((d: any) => (
+                                        <option key={d.id} value={d.id}>{d.name}</option>
+                                    ))}
+                                </select>
+
+                                {/* Ward Dropdown */}
+                                <select
+                                    className="input"
+                                    value={formData.wardId || ''}
+                                    onChange={(e) => {
+                                        const selectedId = parseInt(e.target.value) || 0;
+                                        const selected = wards.find((w: any) => w.id === selectedId);
+                                        setFormData({
+                                            ...formData,
+                                            wardId: selectedId,
+                                            wardName: selected?.name || ''
+                                        });
+                                    }}
+                                    disabled={!formData.districtId || isLoadingLocations}
+                                >
+                                    <option value="">-- Chọn Phường/Xã --</option>
+                                    {wards.map((w: any) => (
+                                        <option key={w.id} value={w.id}>{w.name}</option>
+                                    ))}
+                                </select>
+
+                                {/* Street Address */}
+                                <input
+                                    className="input"
+                                    value={formData.address}
+                                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                    placeholder="Số nhà, tên đường..."
+                                />
+
+                                {isLoadingLocations && (
+                                    <p className="text-xs text-dark-400">Đang tải địa chỉ...</p>
+                                )}
                             </div>
+
                             <div className="flex gap-3 pt-4">
                                 <button type="button" className="btn btn-secondary flex-1" onClick={() => setShowModal(false)}>Hủy</button>
                                 <button type="submit" className="btn btn-primary flex-1">{editingCustomer ? 'Cập nhật' : 'Thêm mới'}</button>
@@ -283,7 +454,7 @@ export default function CustomersPage() {
                                             </div>
                                             <div className="flex items-start gap-3">
                                                 <span className="text-dark-400 w-24">📍 Địa chỉ:</span>
-                                                <span className="font-medium">{editingCustomer.address || '-'}</span>
+                                                <span className="font-medium">{[editingCustomer.address, editingCustomer.wardName, editingCustomer.districtName, editingCustomer.provinceName].filter(Boolean).join(', ') || '-'}</span>
                                             </div>
                                         </div>
                                     </div>

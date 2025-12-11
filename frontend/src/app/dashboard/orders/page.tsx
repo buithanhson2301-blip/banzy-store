@@ -196,7 +196,13 @@ export default function OrdersPage() {
                     name: formData.customerName,
                     phone: formData.customerPhone,
                     email: formData.customerEmail,
-                    address: formData.shippingAddress
+                    address: formData.shippingAddress,
+                    provinceId: formData.receiverProvinceId,
+                    districtId: formData.receiverDistrictId,
+                    wardId: formData.receiverWardId,
+                    provinceName: formData.receiverProvinceName,
+                    districtName: formData.receiverDistrictName,
+                    wardName: formData.receiverWardName
                 });
             }
 
@@ -634,7 +640,7 @@ export default function OrdersPage() {
                                 <div className="grid grid-cols-2 gap-4 p-4 bg-dark-800 rounded-lg">
                                     <div><p className="text-dark-500 text-sm">Khách hàng</p><p className="font-medium">{selectedOrder.customerName || '-'}</p></div>
                                     <div><p className="text-dark-500 text-sm">Điện thoại</p><p className="font-medium">{selectedOrder.customerPhone || '-'}</p></div>
-                                    <div className="col-span-2"><p className="text-dark-500 text-sm">Địa chỉ</p><p className="font-medium">{selectedOrder.shippingAddress}</p></div>
+                                    <div className="col-span-2"><p className="text-dark-500 text-sm">Địa chỉ</p><p className="font-medium">{[selectedOrder.shippingAddress, selectedOrder.receiverWardName, selectedOrder.receiverDistrictName, selectedOrder.receiverProvinceName].filter(Boolean).join(', ') || '-'}</p></div>
                                 </div>
                                 <div className="table-container">
                                     <table className="table">
