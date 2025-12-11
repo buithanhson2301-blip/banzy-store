@@ -529,7 +529,8 @@ export default function OrderDetailPage() {
                       ready_to_ship: 'Sẵn sàng giao',
                       shipping: 'Đang giao',
                       delivered: 'Đã giao',
-                      completed: 'Hoàn thành'
+                      completed: 'Hoàn thành',
+                      returned: 'Hoàn hàng'
                     };
                     if (!confirm(`Chuyển trạng thái sang "${statusLabels[newStatus]}"?`)) {
                       e.target.value = '';
@@ -551,6 +552,7 @@ export default function OrderDetailPage() {
                   {['pending', 'processing'].includes(order.status) && <option value="ready_to_ship">→ Sẵn sàng giao</option>}
                   {['pending', 'processing', 'ready_to_ship'].includes(order.status) && <option value="shipping">→ Đang giao</option>}
                   {order.status === 'shipping' && <option value="completed">→ Hoàn thành</option>}
+                  {order.status === 'shipping' && <option value="returned">→ Hoàn hàng</option>}
                 </select>
               </div>
             )}
