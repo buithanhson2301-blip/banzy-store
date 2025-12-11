@@ -1,9 +1,9 @@
 import { Order, Product, Customer } from '../models/index.js';
 import { updateCustomerTier } from './tierController.js';
 
-// Status transition rules
+// Status transition rules - Updated for manual shipping flexibility
 const STATUS_TRANSITIONS = {
-    pending: ['processing', 'ready_to_ship', 'cancelled'],
+    pending: ['processing', 'ready_to_ship', 'shipping', 'cancelled'], // Added shipping for manual
     processing: ['ready_to_ship', 'shipping', 'cancelled'],
     ready_to_ship: ['shipping', 'cancelled'],
     shipping: ['delivered', 'completed', 'returned', 'cancelled'],

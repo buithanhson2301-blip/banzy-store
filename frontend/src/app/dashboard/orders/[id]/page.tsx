@@ -396,28 +396,51 @@ export default function OrderDetailPage() {
               Đơn hàng chưa được gửi cho đơn vị vận chuyển.
             </p>
             {['pending', 'processing', 'ready_to_ship'].includes(order.status) && (
-              <button
-                className="btn btn-primary"
-                onClick={async () => {
-                  if (!confirm('Gửi đơn hàng này cho Viettel Post?')) return;
-                  try {
-                    toast.loading('Đang tạo đơn vận chuyển...', { id: 'shipping' });
-                    const { data: result } = await shippingAPI.sendToShipping(order._id, 'viettel_post');
-                    if (result.success) {
-                      toast.success(`Thành công! Mã vận đơn: ${result.trackingCode}`, { id: 'shipping' });
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="btn btn-primary"
+                  onClick={async () => {
+                    if (!confirm('Gửi đơn hàng này cho Viettel Post?')) return;
+                    try {
+                      toast.loading('Đang tạo đơn vận chuyển...', { id: 'shipping' });
+                      const { data: result } = await shippingAPI.sendToShipping(order._id, 'viettel_post');
+                      if (result.success) {
+                        toast.success(`Thành công! Mã vận đơn: ${result.trackingCode}`, { id: 'shipping' });
+                        const { data } = await ordersAPI.getById(id as string);
+                        setOrder(data);
+                      } else {
+                        toast.error(result.message || 'Có lỗi xảy ra', { id: 'shipping' });
+                      }
+                    } catch (e: any) {
+                      toast.error(e.message || 'Không thể gửi đơn. Vui lòng kiểm tra cấu hình Viettel Post.', { id: 'shipping' });
+                    }
+                  }}
+                >
+                  <Truck className="w-4 h-4" />
+                  Gửi cho Viettel Post
+                </button>
+
+                {/* Manual shipping button */}
+                <button
+                  className="btn btn-secondary"
+                  onClick={async () => {
+                    const trackingCode = prompt('Nhập mã vận đơn (nếu có, bỏ trống nếu tự giao):');
+                    if (trackingCode === null) return; // Cancelled
+                    try {
+                      toast.loading('Đang xử lý...', { id: 'manual-ship' });
+                      await ordersAPI.updateStatus(order._id, 'shipping', `Tự giao hàng${trackingCode ? `. MVĐ: ${trackingCode}` : ''}`);
+                      toast.success('Đã chuyển sang trạng thái đang giao', { id: 'manual-ship' });
                       const { data } = await ordersAPI.getById(id as string);
                       setOrder(data);
-                    } else {
-                      toast.error(result.message || 'Có lỗi xảy ra', { id: 'shipping' });
+                    } catch (e: any) {
+                      toast.error(e.message || 'Không thể cập nhật', { id: 'manual-ship' });
                     }
-                  } catch (e: any) {
-                    toast.error(e.message || 'Không thể gửi đơn. Vui lòng kiểm tra cấu hình Viettel Post.', { id: 'shipping' });
-                  }
-                }}
-              >
-                <Truck className="w-4 h-4" />
-                Gửi cho Viettel Post
-              </button>
+                  }}
+                >
+                  <Package className="w-4 h-4" />
+                  Tự giao hàng
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -479,6 +502,67 @@ export default function OrderDetailPage() {
                 ✅ Xác nhận hoàn thành
               </button>
             )}
+
+            {/* Nút xác nhận đã giao - cho đơn tự giao (shipping nhưng không có trackingCode VTP) */}
+            {order.status === 'shipping' && !order.trackingCode && (
+              <button
+                className="btn btn-primary"
+                onClick={async () => {
+                  try {
+                    await ordersAPI.updateStatus(order._id, 'delivered', 'Xác nhận đã giao (tự giao)');
+                    toast.success('Đã xác nhận giao thành công!');
+                    const { data } = await ordersAPI.getById(id as string);
+                    setOrder(data);
+                  } catch (e: any) { toast.error(e.message); }
+                }}
+              >
+                📦 Xác nhận đã giao
+              </button>
+            )}
+
+            {/* Dropdown chọn trạng thái thủ công */}
+            {!order.trackingCode && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-dark-400">Chuyển trạng thái:</span>
+                <select
+                  className="input w-auto"
+                  value=""
+                  onChange={async (e) => {
+                    const newStatus = e.target.value;
+                    if (!newStatus) return;
+                    const statusLabels: Record<string, string> = {
+                      pending: 'Chờ xử lý',
+                      processing: 'Đang xử lý',
+                      ready_to_ship: 'Sẵn sàng giao',
+                      shipping: 'Đang giao',
+                      delivered: 'Đã giao',
+                      completed: 'Hoàn thành'
+                    };
+                    if (!confirm(`Chuyển trạng thái sang "${statusLabels[newStatus]}"?`)) {
+                      e.target.value = '';
+                      return;
+                    }
+                    try {
+                      await ordersAPI.updateStatus(order._id, newStatus, 'Cập nhật thủ công');
+                      toast.success(`Đã chuyển sang: ${statusLabels[newStatus]}`);
+                      const { data } = await ordersAPI.getById(id as string);
+                      setOrder(data);
+                    } catch (err: any) {
+                      toast.error(err.message || 'Không thể chuyển trạng thái');
+                    }
+                    e.target.value = '';
+                  }}
+                >
+                  <option value="">-- Chọn --</option>
+                  {order.status === 'pending' && <option value="processing">→ Đang xử lý</option>}
+                  {['pending', 'processing'].includes(order.status) && <option value="ready_to_ship">→ Sẵn sàng giao</option>}
+                  {['pending', 'processing', 'ready_to_ship'].includes(order.status) && <option value="shipping">→ Đang giao</option>}
+                  {order.status === 'shipping' && <option value="delivered">→ Đã giao</option>}
+                  {order.status === 'delivered' && <option value="completed">→ Hoàn thành</option>}
+                </select>
+              </div>
+            )}
+
             {/* Nút hủy đơn - chỉ khi chưa giao */}
             {['pending', 'processing', 'ready_to_ship'].includes(order.status) && (
               <button
