@@ -6,7 +6,7 @@ const STATUS_TRANSITIONS = {
     pending: ['processing', 'ready_to_ship', 'shipping', 'cancelled'], // Added shipping for manual
     processing: ['ready_to_ship', 'shipping', 'cancelled'],
     ready_to_ship: ['shipping', 'cancelled'],
-    shipping: ['delivered', 'completed', 'returned', 'cancelled'],
+    shipping: ['delivered', 'completed', 'returned', 'cancelled'], // Can go directly to completed
     delivered: ['completed', 'returned'],
     completed: [],
     cancelled: [],

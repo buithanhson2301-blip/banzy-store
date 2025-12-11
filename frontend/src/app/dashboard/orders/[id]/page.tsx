@@ -496,37 +496,20 @@ export default function OrderDetailPage() {
         <div className="card p-4">
           <h3 className="font-semibold mb-4">Thao tác đơn hàng</h3>
           <div className="flex flex-wrap gap-3">
-            {/* Chỉ hiện nút hoàn thành khi đã giao thành công */}
-            {order.status === 'delivered' && (
+            {/* Chỉ hiện nút hoàn thành khi đang giao (tự giao, không qua VTP) */}
+            {order.status === 'shipping' && !order.trackingCode && (
               <button
                 className="btn btn-primary"
                 onClick={async () => {
                   try {
-                    await ordersAPI.updateStatus(order._id, 'completed');
+                    await ordersAPI.updateStatus(order._id, 'completed', 'Hoàn thành đơn (tự giao)');
                     toast.success('Đơn hàng hoàn thành!');
                     const { data } = await ordersAPI.getById(id as string);
                     setOrder(data);
                   } catch (e: any) { toast.error(e.message); }
                 }}
               >
-                ✅ Xác nhận hoàn thành
-              </button>
-            )}
-
-            {/* Nút xác nhận đã giao - cho đơn tự giao (shipping nhưng không có trackingCode VTP) */}
-            {order.status === 'shipping' && !order.trackingCode && (
-              <button
-                className="btn btn-primary"
-                onClick={async () => {
-                  try {
-                    await ordersAPI.updateStatus(order._id, 'delivered', 'Xác nhận đã giao (tự giao)');
-                    toast.success('Đã xác nhận giao thành công!');
-                    const { data } = await ordersAPI.getById(id as string);
-                    setOrder(data);
-                  } catch (e: any) { toast.error(e.message); }
-                }}
-              >
-                📦 Xác nhận đã giao
+                ✅ Hoàn thành đơn
               </button>
             )}
 
@@ -567,8 +550,7 @@ export default function OrderDetailPage() {
                   {order.status === 'pending' && <option value="processing">→ Đang xử lý</option>}
                   {['pending', 'processing'].includes(order.status) && <option value="ready_to_ship">→ Sẵn sàng giao</option>}
                   {['pending', 'processing', 'ready_to_ship'].includes(order.status) && <option value="shipping">→ Đang giao</option>}
-                  {order.status === 'shipping' && <option value="delivered">→ Đã giao</option>}
-                  {order.status === 'delivered' && <option value="completed">→ Hoàn thành</option>}
+                  {order.status === 'shipping' && <option value="completed">→ Hoàn thành</option>}
                 </select>
               </div>
             )}
