@@ -368,14 +368,31 @@ export default function OrdersPage() {
                                                                     key={c._id}
                                                                     type="button"
                                                                     className="w-full px-3 py-2 text-left hover:bg-dark-700 flex items-center gap-2 text-sm"
-                                                                    onClick={() => {
+                                                                    onClick={async () => {
+                                                                        // Load districts and wards if customer has address
+                                                                        if (c.provinceId) {
+                                                                            try {
+                                                                                const { data: distData } = await shippingAPI.getDistricts(c.provinceId);
+                                                                                setDistricts(distData.districts || []);
+                                                                                if (c.districtId) {
+                                                                                    const { data: wardData } = await shippingAPI.getWards(c.districtId);
+                                                                                    setWards(wardData.wards || []);
+                                                                                }
+                                                                            } catch (e) { console.error(e); }
+                                                                        }
                                                                         setFormData({
                                                                             ...formData,
                                                                             customerId: c._id,
                                                                             customerName: c.name,
                                                                             customerPhone: c.phone,
                                                                             customerEmail: c.email || '',
-                                                                            shippingAddress: c.address || formData.shippingAddress
+                                                                            shippingAddress: c.address || formData.shippingAddress,
+                                                                            receiverProvinceId: c.provinceId || 0,
+                                                                            receiverDistrictId: c.districtId || 0,
+                                                                            receiverWardId: c.wardId || 0,
+                                                                            receiverProvinceName: c.provinceName || '',
+                                                                            receiverDistrictName: c.districtName || '',
+                                                                            receiverWardName: c.wardName || ''
                                                                         });
                                                                         setOriginalCustomer({
                                                                             name: c.name,
@@ -422,14 +439,31 @@ export default function OrdersPage() {
                                                                     key={c._id}
                                                                     type="button"
                                                                     className="w-full px-3 py-2 text-left hover:bg-dark-700 flex items-center gap-2 text-sm"
-                                                                    onClick={() => {
+                                                                    onClick={async () => {
+                                                                        // Load districts and wards if customer has address
+                                                                        if (c.provinceId) {
+                                                                            try {
+                                                                                const { data: distData } = await shippingAPI.getDistricts(c.provinceId);
+                                                                                setDistricts(distData.districts || []);
+                                                                                if (c.districtId) {
+                                                                                    const { data: wardData } = await shippingAPI.getWards(c.districtId);
+                                                                                    setWards(wardData.wards || []);
+                                                                                }
+                                                                            } catch (e) { console.error(e); }
+                                                                        }
                                                                         setFormData({
                                                                             ...formData,
                                                                             customerId: c._id,
                                                                             customerName: c.name,
                                                                             customerPhone: c.phone,
                                                                             customerEmail: c.email || '',
-                                                                            shippingAddress: c.address || formData.shippingAddress
+                                                                            shippingAddress: c.address || formData.shippingAddress,
+                                                                            receiverProvinceId: c.provinceId || 0,
+                                                                            receiverDistrictId: c.districtId || 0,
+                                                                            receiverWardId: c.wardId || 0,
+                                                                            receiverProvinceName: c.provinceName || '',
+                                                                            receiverDistrictName: c.districtName || '',
+                                                                            receiverWardName: c.wardName || ''
                                                                         });
                                                                         setOriginalCustomer({
                                                                             name: c.name,
